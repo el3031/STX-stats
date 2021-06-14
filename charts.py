@@ -34,24 +34,31 @@ def main(argv):
         age = df.loc[i, 'Age']
         age_float = float(age)
         df.loc[i, 'Age'] = age_float
-
-    ########  calling graph functions ########
-    
+    ########  crm to region cleaning ########
     df = replaceCRM(df)
-
-    surgeriesByAge(df, 'Africa', '2020')
+    
+    ########  calling graph functions ########
+    regionList = []
+    for i in df.index:
+        region = df.loc[i, 'CRM']
+        if region not in regionList:
+            regionList.append(region)
+    
+    for region in regionList:
+        dfRegion = df.loc[df['CRM'] == region].copy().reset_index()
+        surgeriesByAge(dfRegion, region, '2020', 'Country')
+    
     """
     primaryLipNoseUnilateralTypes(df, 'Africa', '2020')
     primaryLipNoseBilateralTypes(df, 'Africa', '2020')
     lipNoseRevisionTypes(df, 'Africa', '2020')
     """
 
-    print(df.head(100))
 
 
 
 
-def surgeriesByAge(df, location, year):
+def surgeriesByAge(df, location, year, hueCat):
     for i in df.index:
         if df.loc[i, 'Operations'].__contains__('+'):
             selectRow = df.iloc[[i]]
@@ -61,14 +68,14 @@ def surgeriesByAge(df, location, year):
                 copy = selectRow.copy()
                 copy.loc[i, 'Operations'] = operations[j].strip()
                 df.append(copy, ignore_index=True)
-                #print(df.loc[i, 'Operations'])
             df.drop(i, inplace=True)
+        df.reset_index()
     sns.set()
     ax = sns.catplot(
         data = df,
         x = 'Operations',
         y = 'Age',
-        hue = 'CRM',
+        hue = hueCat,
         jitter = 1,
         aspect = 3
     )
@@ -178,13 +185,9 @@ def lipNoseRevisionTypes(df, location, year):
 
 def replaceCRM(df):
     directory = '/Users/elaine01px2019/Documents/GitHub/STX_stats_sample/crm'
-    print(directory)
     crmFileName = glob(os.path.join(directory, '*.xlsx'))
     
     crmdf = pd.read_excel(crmFileName[0])
-
-    
-
     crmdf = crmdf.loc[:, 'Name' : 'Title']
     
     crmDictionary = {}
@@ -193,7 +196,6 @@ def replaceCRM(df):
         lastName = crmdf.loc[i, 'Name'].split()[-1]
         crmdf.loc[i, 'Title'] = titleArray[-1].strip()
         crmDictionary.update({lastName: crmdf.loc[i, 'Title']})
-    print(crmDictionary)
 
     for i in df.index:
         crmName = df.loc[i, 'CRM'].split()[-1]
